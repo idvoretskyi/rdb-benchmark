@@ -1,3 +1,3 @@
 [submodule "YCSB"]
 	path = YCSB
-	url = ./YCSB/
+	url = git@github.com:rethinkdb/YCSB.git
