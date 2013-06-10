@@ -52,7 +52,10 @@ function run_mongo_bench {
     sleep 5
 
     echo "Running workload for mongo"
-    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > mongodb-$CLIENTS.out
+    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > mongodb-$CLIENTS-cold.out
+
+    echo "Running again for warm cache numbers"
+    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > mongodb-$CLIENTS-warm.out
 
     kill -SIGINT $MONGO_PID
 
@@ -82,7 +85,10 @@ function run_rdb_bench {
     sleep 5
 
     echo "Running workload for rethinkdb"
-    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > rethinkdb-$CLIENTS.out
+    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > rethinkdb-$CLIENTS-cold.out
+
+    echo "Running again for warm cache numbers"
+    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > rethinkdb-$CLIENTS-warm.out
 
     kill -SIGINT $RDB_PID
     sleep 5
