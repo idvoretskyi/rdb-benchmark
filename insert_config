@@ -1,0 +1,7 @@
+recordcount=1000
+threadcount=1
+
+rethinkdb.durability=soft
+rethinkdb.no_reply=true
+
+mongodb.writeConcern=none

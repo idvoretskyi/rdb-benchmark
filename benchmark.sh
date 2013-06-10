@@ -19,6 +19,8 @@ YCSB=$YCSB_HOME/bin/ycsb
 YCSB_WORKLOADS=$YCSB_HOME/workloads
 
 COMMON_CONFIG=$PWD/common_config
+INSERT_CONFIG=$PWD/insert_config
+RUN_CONFIG=$PWD/run_config
 
 WORKLOAD_FILE=$YCSB_WORKLOADS/workload$WORKLOAD
 
@@ -27,87 +29,70 @@ WORKLOAD_DIR=data_$WORKLOAD
 MONGO_PID=-1
 RDB_PID=-1
 
-function start_mongo {
-    echo "Starting mongod"
+function run_mongo_bench {
+    pushd $WORKLOAD_DIR
 
-    DO_WAIT=0
     if [[ ! -d mongo_data ]]; then
         mkdir mongo_data
-        DO_WAIT=1
+
+        $MONGOD --dbpath mongo_data &
+        MONGO_PID=$!
+        sleep 200
+
+        echo "Loading workload data for mongo"
+        $YCSB load mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $INSERT_CONFIG > /dev/null
+
+        kill -SIGINT $MONGO_PID
+        sleep 50 # Allow time for writeback queue to flush
     fi
 
+    echo ""
     $MONGOD --dbpath mongo_data &
     MONGO_PID=$!
-
-    if [[ $DO_WAIT -eq 1 ]]; then
-        sleep 200
-    else
-        sleep 5
-    fi
-}
-
-function stop_mongo {
-    kill -SIGINT $MONGO_PID
     sleep 5
+
+    echo "Running workload for mongo"
+    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > mongodb-$CLIENTS.out
+
+    kill -SIGINT $MONGO_PID
+
+    popd
 }
 
-function start_rdb {
-    echo "Starting rethinkdb"
+function run_rdb_bench {
+    pushd $WORKLOAD_DIR
 
     if [[ ! -d rdb_data ]]; then
         $RDB create -d rdb_data
+
+        $RDB serve -d rdb_data &
+        RDB_PID=$!
+        sleep 5
+
+        echo "Loading workload data for rethinkdb"
+        $YCSB load rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $INSERT_CONFIG > /dev/null
+
+        kill -SIGINT $RDB_PID
+        sleep 50 # Allow time for writeback queue to flush
     fi
 
+    echo ""
     $RDB serve -d rdb_data &
     RDB_PID=$!
     sleep 5
-}
 
-function stop_rdb {
+    echo "Running workload for rethinkdb"
+    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS > rethinkdb-$CLIENTS.out
+
     kill -SIGINT $RDB_PID
     sleep 5
-}
-
-# Initialize the data if it's not already there
-if [[ ! -d $WORKLOAD_DIR ]]; then
-
-    echo "Initializing workload data"
-
-    mkdir $WORKLOAD_DIR
-    pushd $WORKLOAD_DIR
-
-    start_mongo
-
-    echo "Loading workload data for mongo"
-    $YCSB load mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG > /dev/null
-
-    stop_mongo
-
-    start_rdb
-
-    echo "Loading workload data for rethinkdb"
-    $YCSB load rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG > /dev/null
-
-    stop_rdb
 
     popd
+}
+
+if [[ ! -d $WORKLOAD_DIR ]]; then
+    mkdir $WORKLOAD_DIR
 fi
 
-pushd $WORKLOAD_DIR
-
-start_mongo
-
-# Run the workload
-echo "Running workload for mongo"
-$YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -p threadcount=$CLIENTS > mongodb-$CLIENTS.out
-
-stop_mongo
-
-start_rdb
-
-echo "Running workload for rethinkdb"
-$YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -p threadcount=$CLIENTS > rethinkdb-$CLIENTS.out
-
-stop_rdb
-
-popd
+run_mongo_bench
+run_rdb_bench
