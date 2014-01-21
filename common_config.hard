@@ -1,0 +1,6 @@
+rethinkdb.host=localhost
+rethinkdb.port=28015
+rethinkdb.durability=hard
+
+mongodb.url=mongodb://localhost:27017
+mongodb.writeConcern=fsync_safe
