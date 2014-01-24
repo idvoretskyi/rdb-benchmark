@@ -8,6 +8,10 @@ WORKLOAD=${1:-"a"}
 # How many client threads to run
 CLIENTS=${2:-"10"}
 
+# How many operations to run
+OPCOUNT=100000
+WARMUP_OPCOUNT=10000
+
 echo "Running worload $WORKLOAD"
 echo "Running $CLIENTS client thread(s)"
 
@@ -17,6 +21,7 @@ RDB=$PWD/rethinkdb
 YCSB_HOME=$PWD/YCSB
 YCSB=$YCSB_HOME/bin/ycsb
 YCSB_WORKLOADS=$YCSB_HOME/workloads
+WARMUP_SCRIPT=$PWD/warmup.php
 
 COMMON_CONFIG=$PWD/common_config
 INSERT_CONFIG=$PWD/insert_config
@@ -35,7 +40,7 @@ function run_mongo_bench {
     if [[ ! -d mongo_data ]]; then
         mkdir mongo_data
 
-        $MONGOD --dbpath mongo_data &
+        numactl --interleave=all $MONGOD --dbpath mongo_data &
         MONGO_PID=$!
         sleep 200
 
@@ -52,10 +57,10 @@ function run_mongo_bench {
     sleep 5
 
     echo "Running workload for mongo"
-    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS 1> mongodb-$CLIENTS-cold.out 2>> err.log
+    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p operationcount=$WARMUP_OPCOUNT -threads $CLIENTS 1> mongodb-$CLIENTS-cold.out 2>> err.log
 
     echo "Running again for warm cache numbers"
-    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS 1> mongodb-$CLIENTS-warm.out 2>> err.log
+    $YCSB run mongodb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p operationcount=$OPCOUNT -threads $CLIENTS 1> mongodb-$CLIENTS-warm.out 2>> err.log
 
     kill -SIGINT $MONGO_PID
 
@@ -85,10 +90,14 @@ function run_rdb_bench {
     sleep 5
 
     echo "Running workload for rethinkdb"
-    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS 1> rethinkdb-$CLIENTS-cold.out 2>> err.log
+    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p operationcount=$WARMUP_OPCOUNT -threads $CLIENTS 1> rethinkdb-$CLIENTS-cold.out 2>> err.log
+
+    #echo "Warming up cache now, for real"
+    #php5 $WARMUP_SCRIPT
+    #sleep 2
 
     echo "Running again for warm cache numbers"
-    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p threadcount=$CLIENTS 1> rethinkdb-$CLIENTS-warm.out 2>> err.log
+    $YCSB run rethinkdb -P $WORKLOAD_FILE -P $COMMON_CONFIG -P $RUN_CONFIG -p operationcount=$OPCOUNT -threads $CLIENTS 1> rethinkdb-$CLIENTS-warm.out 2>> err.log
 
     kill -SIGINT $RDB_PID
     sleep 5
