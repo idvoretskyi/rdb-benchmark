@@ -52,7 +52,7 @@ function run_mongo_bench {
     fi
 
     echo ""
-    $MONGOD --dbpath mongo_data &
+    numactl --interleave=all $MONGOD --dbpath mongo_data &
     MONGO_PID=$!
     sleep 5
 
