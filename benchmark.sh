@@ -9,8 +9,8 @@ WORKLOAD=${1:-"a"}
 CLIENTS=${2:-"10"}
 
 # How many operations to run
-OPCOUNT=100000
-WARMUP_OPCOUNT=10000
+OPCOUNT=1000000
+WARMUP_OPCOUNT=50000
 
 echo "Running worload $WORKLOAD"
 echo "Running $CLIENTS client thread(s)"
