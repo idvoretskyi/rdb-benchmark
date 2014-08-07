@@ -4,3 +4,4 @@ rethinkdb.durability=hard
 
 mongodb.url=mongodb://localhost:27017
 mongodb.writeConcern=fsync_safe
+mongodb.maxconnections=256

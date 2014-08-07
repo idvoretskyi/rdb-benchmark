@@ -1,6 +1,6 @@
 operationcount=100000
 
-rethinkdb.durability=soft
+rethinkdb.durability=hard
 rethinkdb.no_reply=false
 
-mongodb.writeConcern=safe
+mongodb.writeConcern=fsync_safe
